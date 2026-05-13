@@ -4,62 +4,71 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Моделирование цикла ДВС - Закон Вибe</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <style>
-    body { font-family: 'Segoe UI', system-ui, sans-serif; }
-    input[type="number"] { transition: all 0.2s; }
-    input[type="number"]:focus { box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.3); }
-    .result-card { transition: transform 0.2s; }
-    .result-card:hover { transform: translateY(-4px); }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+<body>
   <div class="max-w-7xl mx-auto p-6">
     <div class="text-center mb-10">
       <h1 class="text-4xl font-bold text-blue-800 mb-2">
         <i class="fas fa-engine mr-3"></i>Моделирование рабочего цикла дизеля
       </h1>
-      <p class="text-gray-600">Расчёт по закону Вибe с теплообменом</p>
+      <p class="text-gray-600 text-lg">Расчёт по закону Вибe</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <!-- Панель параметров -->
-      <div class="lg:col-span-4 bg-white rounded-2xl shadow-xl p-8">
-        <h2 class="text-2xl font-semibold mb-6 flex items-center gap-2">
-          <i class="fas fa-sliders-h text-blue-600"></i> Исходные данные
+      <!-- Панель ввода -->
+      <div class="lg:col-span-4 bg-white rounded-3xl shadow-2xl p-8">
+        <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+          <i class="fas fa-cogs text-blue-600"></i> Исходные параметры
         </h2>
-        <div id="parameters" class="space-y-5"></div>
+        <div id="parameters" class="space-y-5 max-h-[75vh] overflow-y-auto pr-2"></div>
         
         <button onclick="calculate()" 
-          class="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+          class="mt-10 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-2xl text-lg shadow-lg flex items-center justify-center gap-3">
           <i class="fas fa-calculator"></i> РАССЧИТАТЬ ЦИКЛ
         </button>
       </div>
 
-      <!-- Результаты и графики -->
+      <!-- Kết quả và đồ thị -->
       <div class="lg:col-span-8 space-y-8">
-        <!-- Результаты -->
-        <div id="results" class="hidden bg-white rounded-2xl shadow-xl p-8">
+        <div id="results" class="hidden bg-white rounded-3xl shadow-2xl p-8">
           <h2 class="text-2xl font-semibold mb-6 text-emerald-700">Результаты расчёта</h2>
-          <div id="resultValues" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+          <div id="resultValues" class="grid grid-cols-2 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- Графики -->
-        <div class="bg-white rounded-2xl shadow-xl p-8">
-          <h3 class="font-semibold text-lg mb-4">Индикаторная диаграмма p–V</h3>
-          <canvas id="pvChart" class="w-full" height="140"></canvas>
+        <!-- Đồ thị -->
+        <div class="bg-white rounded-3xl shadow-2xl p-8">
+          <h3 class="font-semibold text-xl mb-5">Индикаторная диаграмма p–V</h3>
+          <div class="h-96"><canvas id="pvChart"></canvas></div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h3 class="font-semibold text-lg mb-4">Давление p(φ)</h3>
-            <canvas id="pPhiChart"></canvas>
+          <div class="bg-white rounded-3xl shadow-2xl p-8">
+            <h3 class="font-semibold text-xl mb-5">Давление p(φ)</h3>
+            <div class="h-80"><canvas id="pPhiChart"></canvas></div>
           </div>
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h3 class="font-semibold text-lg mb-4">Температура T(φ)</h3>
-            <canvas id="tPhiChart"></canvas>
+          <div class="bg-white rounded-3xl shadow-2xl p-8">
+            <h3 class="font-semibold text-xl mb-5">Температура T(φ)</h3>
+            <div class="h-80"><canvas id="tPhiChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="bg-white rounded-3xl shadow-2xl p-8">
+            <h3 class="font-semibold text-lg mb-5">Скорость тепловыделения dQₓ/dφ</h3>
+            <div class="h-80"><canvas id="dQxChart"></canvas></div>
+          </div>
+          <div class="bg-white rounded-3xl shadow-2xl p-8">
+            <h3 class="font-semibold text-lg mb-5">Теплоотдача в стенки dQ_w</h3>
+            <div class="h-80"><canvas id="dQwChart"></canvas></div>
+          </div>
+          <div class="bg-white rounded-3xl shadow-2xl p-8">
+            <h3 class="font-semibold text-lg mb-5">Подвод теплоты</h3>
+            <div class="h-80"><canvas id="heatInputChart"></canvas></div>
           </div>
         </div>
       </div>
