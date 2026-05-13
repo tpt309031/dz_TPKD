@@ -1,0 +1,24 @@
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e0f0ff 100%);
+    min-height: 100vh;
+}
+
+input[type="number"] {
+    transition: all 0.3s ease;
+    border: 2px solid #e5e7eb;
+}
+
+input[type="number"]:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+    outline: none;
+}
+
+.result-card {
+    transition: all 0.3s ease;
+}
+
+.result-card:hover {
+    transform: translateY(-5px);
+}
