@@ -1,4 +1,3 @@
-// ====================== ДАННЫЕ ПО УМОЛЧАНИЮ ======================
 const defaultData = {
   D: 0.087, S: 0.106, E: 14, lamda: 0.27, i: 4,
   xz: 0.99, phiz: 100, mz: 2.3, n: 4600,
@@ -15,19 +14,19 @@ const paramList = [
   {key:"i", name:"Количество цилиндров", unit:""},
   {key:"xz", name:"xz", unit:""},
   {key:"phiz", name:"Продолжительность сгорания", unit:"°ПКВ"},
-  {key:"mz", name:"Показатель m закона Вибe", unit:""},
+  {key:"mz", name:"Показатель m (Вибe)", unit:""},
   {key:"n", name:"Частота вращения n", unit:"об/мин"},
   {key:"alphasg", name:"α сжатия", unit:"Вт/(м²·К)"},
   {key:"alphasj", name:"α сгорания", unit:"Вт/(м²·К)"},
   {key:"alpha", name:"Коэффициент избытка воздуха α", unit:""},
   {key:"phi0", name:"Угол закрытия впускного клапана", unit:"°ПКВ"},
   {key:"phisg", name:"Угол опережения зажигания", unit:"°ПКВ"},
-  {key:"T1", name:"Начальная температура T₁", unit:"К"},
-  {key:"p1", name:"Начальное давление p₁", unit:"Па"},
+  {key:"T1", name:"Начальная температура T1", unit:"К"},
+  {key:"p1", name:"Начальное давление p1", unit:"Па"},
   {key:"Hu", name:"Низшая теплота сгорания Hu", unit:"Дж/кг"},
-  {key:"gC", name:"Доля углерода gC", unit:""},
-  {key:"gH", name:"Доля водорода gH", unit:""},
-  {key:"gO", name:"Доля кислорода gO", unit:""},
+  {key:"gC", name:"Доля C", unit:""},
+  {key:"gH", name:"Доля H", unit:""},
+  {key:"gO", name:"Доля O", unit:""},
   {key:"R", name:"Газовая постоянная R", unit:"Дж/(кг·К)"}
 ];
 
@@ -41,7 +40,7 @@ function createForm() {
       <label class="col-span-7 text-sm font-medium">${p.name}</label>
       <div class="col-span-5">
         <input type="number" id="${p.key}" value="${defaultData[p.key]}" step="0.001"
-               class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-right">
+               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-right">
         <span class="text-xs text-gray-500 block mt-1 text-right">${p.unit}</span>
       </div>
     `;
@@ -49,7 +48,6 @@ function createForm() {
   });
 }
 
-// ====================== ПОРТИРОВАННЫЕ ФУНКЦИИ ======================
 function deg2rad(deg) { return deg * Math.PI / 180; }
 
 function calc_Volume(phi_deg, data) {
@@ -80,6 +78,7 @@ function calc_Wibe(phi, data) {
   return -c * (m + 1) * (betta / phiz)**m * exp / phiz;
 }
 
+// ====================== TÍNH TOÁN ======================
 function calculate() {
   const data = {};
   paramList.forEach(p => {
@@ -87,7 +86,6 @@ function calculate() {
     data[p.key] = isNaN(val) ? defaultData[p.key] : val;
   });
 
-  // Подготовка геометрии
   data.A = Math.PI * data.D * data.D / 4;
   data.Vh = data.A * data.S;
   data.Vc = data.Vh / (data.E - 1);
@@ -98,7 +96,8 @@ function calculate() {
 
   const a = Math.ceil((360 - 50) / data.k);
 
-  const phi_arr = [], p_arr = [], V_arr = [], T_arr = [], dQx_arr = [];
+  const phi_arr = [], p_arr = [], V_arr = [], T_arr = [];
+  const dQx_arr = [], dQw_arr = [], heatInput_arr = [];
 
   let phi = data.phi0;
   let p = data.p1;
@@ -113,80 +112,96 @@ function calculate() {
   for (let i = 0; i < a; i++) {
     phi_arr.push(phi);
     V_arr.push(V);
-    p_arr.push(p / 1e5);        // в бар для удобства
+    p_arr.push(p);
     T_arr.push(T);
 
-    const dL = calc_dV(phi, data);
     const dQx = G1 * data.Hu * calc_Wibe(phi, data) * data.k;
+    const dQw = -data.alphasg * 0.15 * (T - 550);   // xấp xỉ
 
-    const cv = 0.72 + 0.00035 * (T - 273); // приближение
-    const dT = (dQx - dL) / (m * cv);
+    dQx_arr.push(dQx);
+    dQw_arr.push(dQw);
+    heatInput_arr.push(dQx + dQw);
+
+    const dL = calc_dV(phi, data);
+    const cv = 0.72 + 0.00035 * (T - 273);
+    const dT = (dQx + dQw - dL) / (m * cv);
 
     T += dT * data.deltat;
     V = calc_Volume(phi + data.k, data);
     p = m * data.R * T / V;
 
-    L += dL * (p + p_arr[p_arr.length-1]*1e5) / 2; // работа
-
-    dQx_arr.push(dQx);
+    L += dL * (p + (p_arr[p_arr.length-1] || p)) / 2;
     phi += data.k;
   }
 
-  // ====================== ВЫВОД РЕЗУЛЬТАТОВ ======================
+  // Hiển thị kết quả
   document.getElementById("results").classList.remove("hidden");
-
   const p_ind = L / data.Vh / 1e5;
   const N_ind = p_ind * data.i * data.Vh * data.n / 120 * 1e5 / 1000;
-  const eta_ind = 0.38; // приблизительно, можно улучшить
 
-  const html = `
-    <div class="result-card bg-gradient-to-br from-blue-50 to-white p-5 rounded-2xl border border-blue-100">
-      <strong class="text-blue-900">Работа цикла L</strong><br><span class="text-2xl">${L.toFixed(0)}</span> Дж
-    </div>
-    <div class="result-card bg-gradient-to-br from-emerald-50 to-white p-5 rounded-2xl border border-emerald-100">
-      <strong class="text-emerald-900">Среднее индикаторное давление p<sub>i</sub></strong><br><span class="text-2xl">${p_ind.toFixed(3)}</span> бар
-    </div>
-    <div class="result-card bg-gradient-to-br from-violet-50 to-white p-5 rounded-2xl border border-violet-100">
-      <strong class="text-violet-900">Индикаторная мощность N<sub>i</sub></strong><br><span class="text-2xl">${N_ind.toFixed(2)}</span> кВт
-    </div>
-    <div class="result-card bg-gradient-to-br from-amber-50 to-white p-5 rounded-2xl border border-amber-100">
-      <strong class="text-amber-900">Эффективность η<sub>i</sub></strong><br><span class="text-2xl">${(eta_ind*100).toFixed(1)}</span> %
-    </div>
+  document.getElementById("resultValues").innerHTML = `
+    <div class="result-card bg-blue-50 p-5 rounded-2xl"><strong>L</strong><br>${L.toFixed(0)} Дж</div>
+    <div class="result-card bg-emerald-50 p-5 rounded-2xl"><strong>p_i</strong><br>${p_ind.toFixed(3)} бар</div>
+    <div class="result-card bg-violet-50 p-5 rounded-2xl"><strong>N_i</strong><br>${N_ind.toFixed(2)} кВт</div>
   `;
-  document.getElementById("resultValues").innerHTML = html;
 
-  drawCharts(phi_arr, p_arr.map(v => v*1e5), V_arr, T_arr);
+  drawAllCharts(phi_arr, p_arr, V_arr, T_arr, dQx_arr, dQw_arr, heatInput_arr);
 }
 
-// ====================== ГРАФИКИ ======================
+// ====================== VẼ ĐỒ THỊ ======================
 let charts = {};
-function drawCharts(phi, p, V, T) {
-  // p-V
+
+function drawAllCharts(phi, p, V, T, dQx, dQw, heatInput) {
+  // 1. Индикаторная диаграмма p-V
   if (charts.pv) charts.pv.destroy();
   charts.pv = new Chart(document.getElementById("pvChart"), {
     type: 'line',
-    data: { labels: V.map(v=>v.toFixed(5)), datasets: [{label: 'p-V', data: p, borderColor: '#1e40af', tension: 0.4, borderWidth: 3}] },
-    options: { plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: 'V, м³' }}, y: { title: { display: true, text: 'p, Па' }}}}
+    data: { labels: V.map(v => v.toFixed(6)), datasets: [{ label: 'p-V', data: p, borderColor: '#1e40af', borderWidth: 3, tension: 0.3 }] },
+    options: { scales: { x: { title: { display: true, text: 'V (м³)' }}, y: { title: { display: true, text: 'p (Па)' }, ticks: { callback: v => v.toExponential(1) }}}}
   });
 
-  // p(φ)
+  // 2. p(φ)
   if (charts.pphi) charts.pphi.destroy();
   charts.pphi = new Chart(document.getElementById("pPhiChart"), {
     type: 'line',
-    data: { labels: phi, datasets: [{label: 'Давление', data: p, borderColor: '#1e40af', borderWidth: 3}] },
-    options: { scales: { x: { title: { display: true, text: 'φ, °ПКВ' }}} }
+    data: { labels: phi, datasets: [{ label: 'p(φ)', data: p.map(v=>v/1e5), borderColor: '#1e40af', borderWidth: 3 }] },
+    options: { scales: { x: { title: { display: true, text: 'φ (°ПКВ)' }}, y: { title: { display: true, text: 'p (бар)' }}}}
   });
 
-  // T(φ)
+  // 3. T(φ)
   if (charts.tphi) charts.tphi.destroy();
   charts.tphi = new Chart(document.getElementById("tPhiChart"), {
     type: 'line',
-    data: { labels: phi, datasets: [{label: 'Температура', data: T, borderColor: '#dc2626', borderWidth: 3}] },
-    options: { scales: { x: { title: { display: true, text: 'φ, °ПКВ' }}} }
+    data: { labels: phi, datasets: [{ label: 'T(φ)', data: T, borderColor: '#dc2626', borderWidth: 3 }] },
+    options: { scales: { x: { title: { display: true, text: 'φ (°ПКВ)' }}, y: { title: { display: true, text: 'T (К)' }}}}
+  });
+
+  // 4. Скорость тепловыделения
+  if (charts.dQx) charts.dQx.destroy();
+  charts.dQx = new Chart(document.getElementById("dQxChart"), {
+    type: 'line',
+    data: { labels: phi, datasets: [{ label: 'dQₓ/dφ', data: dQx, borderColor: '#16a34a', borderWidth: 3 }] },
+    options: { scales: { x: { title: { display: true, text: 'φ (°ПКВ)' }}, y: { title: { display: true, text: 'Дж/°ПКВ' }}}}
+  });
+
+  // 5. Теплоотдача
+  if (charts.dQw) charts.dQw.destroy();
+  charts.dQw = new Chart(document.getElementById("dQwChart"), {
+    type: 'line',
+    data: { labels: phi, datasets: [{ label: 'dQ_w', data: dQw, borderColor: '#ca8a04', borderWidth: 3 }] },
+    options: { scales: { x: { title: { display: true, text: 'φ (°ПКВ)' }}, y: { title: { display: true, text: 'Дж' }}}}
+  });
+
+  // 6. Подвод теплоты
+  if (charts.heat) charts.heat.destroy();
+  charts.heat = new Chart(document.getElementById("heatInputChart"), {
+    type: 'line',
+    data: { labels: phi, datasets: [{ label: 'Подвод теплоты', data: heatInput, borderColor: '#7c3aed', borderWidth: 3 }] },
+    options: { scales: { x: { title: { display: true, text: 'φ (°ПКВ)' }}, y: { title: { display: true, text: 'Дж' }}}}
   });
 }
 
 window.onload = () => {
   createForm();
-  setTimeout(calculate, 600);
+  setTimeout(calculate, 500);
 };
