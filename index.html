@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Моделирование цикла ДВС - Закон Вибe</title>
   
-  <!-- Favicon -->
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-  <link rel="apple-touch-icon" href="favicon.png">
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
@@ -19,13 +14,13 @@
   <div class="max-w-7xl mx-auto p-6">
     <div class="text-center mb-10">
       <h1 class="text-4xl font-bold text-blue-800 mb-2">
-        <i class="fas fa-engine mr-3"></i>Моделирование рабочего цикла 
+        <i class="fas fa-engine mr-3"></i>Моделирование рабочего цикла дизеля
       </h1>
-      <p class="text-gray-600 text-lg">Расчёт</p>
+      <p class="text-gray-600 text-lg">Расчёт по закону Вибe</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <!-- Панель ввода -->
+      <!-- Input -->
       <div class="lg:col-span-4 bg-white rounded-3xl shadow-2xl p-8">
         <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
           <i class="fas fa-cogs text-blue-600"></i> Исходные параметры
@@ -34,18 +29,18 @@
         
         <button onclick="calculate()" 
           class="mt-10 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-2xl text-lg shadow-lg flex items-center justify-center gap-3">
-          <i class="fas fa-calculator"></i> РАССЧИТАТЬ
+          <i class="fas fa-calculator"></i> РАССЧИТАТЬ ЦИКЛ
         </button>
       </div>
 
-      <!-- Kết quả và đồ thị -->
+      <!-- Output -->
       <div class="lg:col-span-8 space-y-8">
         <div id="results" class="hidden bg-white rounded-3xl shadow-2xl p-8">
           <h2 class="text-2xl font-semibold mb-6 text-emerald-700">Результаты расчёта</h2>
           <div id="resultValues" class="grid grid-cols-2 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- Đồ thị -->
+        <!-- Индикаторная диаграмма p-V -->
         <div class="bg-white rounded-3xl shadow-2xl p-8">
           <h3 class="font-semibold text-xl mb-5">Индикаторная диаграмма p–V</h3>
           <div class="h-96"><canvas id="pvChart"></canvas></div>
@@ -62,6 +57,7 @@
           </div>
         </div>
 
+        <!-- Các đồ thị nhiệt -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div class="bg-white rounded-3xl shadow-2xl p-8">
             <h3 class="font-semibold text-lg mb-5">Скорость тепловыделения dQₓ/dφ</h3>
